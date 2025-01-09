@@ -110,5 +110,28 @@ export const deleteAlbum = async (req, res, next) => {
 };
 
 export const checkAdmin = async (req, res, next) => {
-	res.status(200).json({ admin: true });
+    try {
+        // Ensure the user is authenticated by checking req.auth.userId
+        if (!req.auth.userId) {
+            return res.status(401).json({ message: "Unauthorized - you must be logged in" });
+        }
+
+        // Fetch the user details using Clerk's API by the user ID
+        const currentUser = await clerkClient.users.getUser(req.auth.userId);
+
+        // Check if the current user is an admin
+        const isAdmin = process.env.ADMIN_EMAIL === currentUser.primaryEmailAddress?.emailAddress;
+
+        // If the user is an admin, proceed to the next middleware or route
+        if (isAdmin) {
+            return res.status(200).json({ admin: true });
+        } else {
+            // If not an admin, return a 403 Forbidden response
+            return res.status(403).json({ message: "Unauthorized - you must be an admin" });
+        }
+    } catch (error) {
+        // If any error occurs, pass it to the error handler
+        console.error('Error checking admin status:', error);
+        next(error);
+    }
 };
